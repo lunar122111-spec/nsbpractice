@@ -81,10 +81,17 @@ window.logout = async function () {
     return;
   }
 
+  // Show logged-out message
   if (el) el.textContent = "You have successfully logged out.";
 
+  // Clear user and local stats
   currentUser = null;
   localStorage.removeItem("nsb_stats");
+
+  // Optional: revert to "Not logged in" after 3 seconds
+  setTimeout(() => {
+    if (el) el.textContent = "Not logged in";
+  }, 3000);
 };
 sb.auth.onAuthStateChange((_event, session) => {
   const el = document.getElementById("accountStatus");
@@ -103,5 +110,6 @@ sb.auth.onAuthStateChange((_event, session) => {
     }, 3000);
   }
 });
+
 
 
