@@ -85,11 +85,6 @@ window.logout = async function () {
 
   currentUser = null;
   localStorage.removeItem("nsb_stats");
-
-  // Wait 2 seconds before letting onAuthStateChange update
-  setTimeout(() => {
-    if (el) el.textContent = "Not logged in";
-  }, 2000);
 };
 sb.auth.onAuthStateChange((_event, session) => {
   const el = document.getElementById("accountStatus");
@@ -108,4 +103,5 @@ sb.auth.onAuthStateChange((_event, session) => {
     }, 3000);
   }
 });
+
 
