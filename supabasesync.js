@@ -73,8 +73,18 @@ localStorage.setItem = function (key, value) {
   }
 };
 window.logout = async function () {
-  await sb.auth.signOut();
-  location.reload();
+  const { error } = await sb.auth.signOut();
+  const el = document.getElementById("accountStatus");
+
+  if (error) {
+    alert("Logout failed: " + error.message);
+    return;
+  }
+
+  if (el) el.textContent = "You have successfully logged out.";
+
+  currentUser = null;
+  localStorage.removeItem("nsb_stats");
 };
 sb.auth.onAuthStateChange((_event, session) => {
   const el = document.getElementById("accountStatus");
@@ -85,4 +95,5 @@ sb.auth.onAuthStateChange((_event, session) => {
   } else {
     el.textContent = "Not logged in";
   }
+
 });
