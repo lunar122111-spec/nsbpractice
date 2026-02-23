@@ -397,8 +397,7 @@
       // Supabase automatically picks up the token from the hash
       sb.auth.getSession().then(({ data }) => {
         if (data.session) {
-          // Clean the URL so it looks normal
-          history.replaceState(null, '', window.location.pathname);
+          history.replaceState(null, '', '/nsbpractice/');
         }
       });
     }
