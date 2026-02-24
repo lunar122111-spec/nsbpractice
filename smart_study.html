@@ -334,6 +334,17 @@
     <div style="text-align:center;margin-top:8px">
       <button class="back-btn" onclick="endSession()">END SESSION</button>
     </div>
+
+    <!-- Session History -->
+    <div style="margin-top:28px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">
+        Session History
+      </div>
+      <div id="history-list">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);padding:12px 0">No questions yet this session.</div>
+      </div>
+    </div>
+
   </div>
 
 </div>
@@ -367,6 +378,7 @@ let tossupCorrect = false;
 // Session stats
 let sessionAnswered = 0;
 let sessionCorrect  = 0;
+let sessionHistory  = []; // {subject, question, answer, userAnswer, correct, isBonus}
 
 // Live accuracy tracking (combines historical + session)
 let subjectStats = {}; // subject -> { correct, total }
@@ -441,6 +453,7 @@ function startSession() {
   questionPool    = {};
   sessionAnswered = 0;
   sessionCorrect  = 0;
+  sessionHistory  = [];
   isBonus         = false;
 
   document.getElementById('setup-screen').classList.add('hide');
@@ -552,7 +565,8 @@ function submitSA(q) {
   if (!val) return;
   inp.disabled = true;
   const correct = checkAnswer(val, q);
-  inp.className = 'answer-input ' + (correct ? 'correct-input' : 'wrong-input');
+  inp.style.borderColor = correct ? 'var(--green)' : 'var(--red)';
+  inp.style.color = correct ? 'var(--green)' : 'var(--red)';
   handleResult(correct, q);
 }
 
@@ -561,23 +575,30 @@ function handleResult(correct, q) {
   if (!isBonus) {
     if (correct) sessionCorrect++;
     tossupCorrect = correct;
-    // Record to stats
     Stats.recordPracticeAnswer({ subject: q.subject, type: q.type, isBonus: false, correct });
   } else {
     if (correct) sessionCorrect++;
     Stats.recordPracticeAnswer({ subject: q.subject, type: q.type, isBonus: true, correct });
   }
 
+  // Record to history
+  const inp = document.getElementById('answer-input');
+  const userAnswer = inp.disabled ? inp.value.trim() : null;
+  sessionHistory.unshift({
+    subject: q.subject, question: q.question,
+    answer: q.answer, userAnswer, correct, isBonus,
+    type: q.type
+  });
+
   const fb = document.getElementById('feedback');
-  fb.textContent  = correct ? '✓ Correct!' : '✗ Incorrect.';
-  fb.className    = `feedback show ${correct ? 'correct' : 'wrong'}`;
+  fb.textContent = correct ? '✓ Correct!' : '✗ Incorrect.';
+  fb.className   = `feedback show ${correct ? 'correct' : 'wrong'}`;
 
   // Always show the correct answer
   const qRef = isBonus ? currentQ.bonus : currentQ.tossup;
   document.getElementById('reveal-text').textContent = qRef.answer;
   document.getElementById('answer-reveal').classList.add('show');
 
-  // Show action buttons
   const actionRow = document.getElementById('action-row');
   actionRow.classList.add('show');
 
@@ -587,7 +608,8 @@ function handleResult(correct, q) {
   }
 
   updateCounter();
-  updateBreakdown(); // re-render with fresh stats
+  updateBreakdown();
+  renderHistory();
 }
 
 function showBonus() {
@@ -636,6 +658,37 @@ function updateCounter() {
   const acc = sessionAnswered > 0 ? Math.round(sessionCorrect/sessionAnswered*100) : 0;
   document.getElementById('session-counter').textContent =
     `Session: ${sessionAnswered} answered · ${sessionCorrect} correct · ${acc}% accuracy`;
+}
+
+function renderHistory() {
+  const container = document.getElementById('history-list');
+  if (!container) return;
+  container.innerHTML = '';
+  if (sessionHistory.length === 0) {
+    container.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);padding:12px 0">No questions yet this session.</div>`;
+    return;
+  }
+  sessionHistory.forEach((h, i) => {
+    const div = document.createElement('div');
+    div.style.cssText = `
+      border-left: 3px solid ${h.correct ? 'var(--green)' : 'var(--red)'};
+      padding: 10px 14px; margin-bottom: 8px;
+      background: var(--surface2); border-radius: 0 3px 3px 0;
+    `;
+    const icon    = h.correct ? '✓' : '✗';
+    const iconCol = h.correct ? 'var(--green)' : 'var(--red)';
+    const badge   = h.isBonus ? 'BONUS' : 'TOSS-UP';
+    const userAns = h.userAnswer ? ` · You said: <em style="color:var(--muted)">${h.userAnswer}</em>` : '';
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted)">${badge} · ${h.subject}</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:${iconCol}">${icon}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text);margin-bottom:6px;line-height:1.5">${h.question}</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--green)">Answer: ${h.answer}${userAns}</div>
+    `;
+    container.appendChild(div);
+  });
 }
 
 function endSession() {
