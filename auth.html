@@ -133,7 +133,8 @@
 <script>
 const SUPABASE_URL = 'https://uhzyfukvbodiofvcistr.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoenlmdWt2Ym9kaW9mdmNpc3RyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4MDM3OTUsImV4cCI6MjA4NzM3OTc5NX0.o3IAwdbk-aSZb-kJvSTmHK1H3lsRT4GI-O2jZbZRvPA';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window._sbClient || supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+window._sbClient = sb;
 
 let mode = 'login';
 
