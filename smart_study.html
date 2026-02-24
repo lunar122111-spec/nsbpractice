@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Study – Science Bowl Bot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0d1b2a; --surface: #1b263b91; --surface2: #162535;
+      --border: #415a7793; --accent: #778da9; --accent2: #4e8098;
+      --text: #e8f0fe; --muted: #e0e1dd;
+      --green: #00ff88; --red: #ff4d6d; --yellow: #ffd60a;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif; min-height: 100vh;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px; opacity: 0.4; z-index: 0; pointer-events: none;
+    }
+    body::after {
+      content: ''; position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
+      background:
+        radial-gradient(ellipse at 60% 40%, rgba(34,131,110,0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 30% 70%, rgba(78,128,152,0.10) 0%, transparent 60%);
+      z-index: 0; pointer-events: none;
+    }
+    .container {
+      position: relative; z-index: 1;
+      max-width: 800px; margin: 0 auto; padding: 24px 24px 80px;
+    }
+    .topnav {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .back-btn {
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--muted); text-decoration: none;
+      border: 1px solid var(--border); padding: 6px 14px; border-radius: 2px;
+      transition: color 0.2s, border-color 0.2s; background: none; cursor: pointer;
+    }
+    .back-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .page-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px; letter-spacing: 3px;
+    }
+
+    /* ── Subject breakdown panel ── */
+    .breakdown-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; padding: 16px 20px; margin-bottom: 16px;
+    }
+    .breakdown-header {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
+      margin-bottom: 12px; display: flex; justify-content: space-between;
+    }
+    .subject-row {
+      display: grid; grid-template-columns: 120px 1fr 40px;
+      align-items: center; gap: 10px; margin-bottom: 8px;
+    }
+    .subject-name {
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+      color: var(--muted); white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bar-wrap { height: 5px; background: var(--border); border-radius: 3px; }
+    .bar-fill  { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+    .bar-fill.good { background: var(--green); }
+    .bar-fill.mid  { background: var(--yellow); }
+    .bar-fill.bad  { background: var(--red); }
+    .subject-pct {
+      font-family: 'Bebas Neue', sans-serif; font-size: 16px; text-align: right;
+    }
+
+    /* Current focus badge */
+    .focus-banner {
+      background: var(--surface); border: 1px solid var(--accent2);
+      border-left: 3px solid var(--accent2);
+      border-radius: 4px; padding: 12px 18px; margin-bottom: 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .focus-label {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
+    }
+    .focus-subject {
+      font-family: 'Bebas Neue', sans-serif; font-size: 22px;
+      letter-spacing: 2px; color: var(--accent2);
+    }
+    .focus-reason {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      color: var(--muted); text-align: right;
+    }
+
+    /* Question card */
+    .question-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; padding: 24px; margin-bottom: 14px;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .q-meta {
+      display: flex; gap: 10px; align-items: center; margin-bottom: 14px;
+    }
+    .q-badge {
+      font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+      letter-spacing: 2px; text-transform: uppercase;
+      border: 1px solid var(--accent2); color: var(--accent2);
+      padding: 3px 8px; border-radius: 2px;
+    }
+    .q-badge.bonus-badge { border-color: var(--accent); color: var(--accent); }
+    .q-subject-tag {
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted);
+    }
+    .q-type-tag {
+      font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+      letter-spacing: 1px; margin-left: auto;
+      padding: 2px 8px; border-radius: 2px;
+    }
+    .q-type-tag.mc { border: 1px solid var(--yellow); color: var(--yellow); }
+    .q-type-tag.sa { border: 1px solid var(--green);  color: var(--green); }
+
+    .question-text { font-size: 17px; line-height: 1.7; color: var(--text); }
+
+    .choices { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+    .choice-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); padding: 10px 16px; border-radius: 3px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+      cursor: pointer; transition: all 0.15s; text-align: left;
+      display: flex; gap: 12px; align-items: center;
+    }
+    .choice-btn:hover:not(:disabled) { border-color: var(--accent); }
+    .choice-btn.correct { border-color: var(--green); color: var(--green); background: rgba(0,255,136,0.05); }
+    .choice-btn.wrong   { border-color: var(--red);   color: var(--red);   background: rgba(255,77,109,0.05); }
+    .choice-btn:disabled { cursor: default; }
+    .choice-letter { font-weight: 600; min-width: 16px; }
+
+    .short-answer-area { margin-top: 14px; }
+    .answer-input {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 3px; padding: 12px 14px; color: var(--text);
+      font-family: 'IBM Plex Mono', monospace; font-size: 15px; outline: none;
+      transition: border-color 0.15s;
+    }
+    .answer-input:focus { border-color: var(--accent); }
+
+    .feedback {
+      font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+      padding: 12px 16px; border-radius: 3px; margin-bottom: 12px;
+      display: none;
+    }
+    .feedback.show { display: block; }
+    .feedback.correct { color: var(--green); background: rgba(0,255,136,0.06); border: 1px solid var(--green); }
+    .feedback.wrong   { color: var(--red);   background: rgba(255,77,109,0.06); border: 1px solid var(--red); }
+
+    .answer-reveal {
+      font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+      color: var(--muted); margin-bottom: 12px; display: none;
+    }
+    .answer-reveal.show { display: block; }
+    .answer-reveal strong { color: var(--text); }
+
+    .action-row { display: none; gap: 10px; margin-bottom: 14px; }
+    .action-row.show { display: flex; }
+
+    .action-btn {
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+      letter-spacing: 2px; text-transform: uppercase;
+      padding: 10px 20px; border-radius: 3px; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-primary { background: var(--accent2); border: 1px solid var(--accent2); color: white; flex: 1; }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Progress counter */
+    .session-counter {
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+      color: var(--muted); text-align: center; margin-bottom: 14px;
+      letter-spacing: 1px;
+    }
+
+    /* Setup screen */
+    #setup-screen { }
+    .setup-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 42px; letter-spacing: 3px; margin-bottom: 6px;
+    }
+    .setup-sub {
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+      color: var(--muted); letter-spacing: 1px; margin-bottom: 32px;
+      line-height: 1.6;
+    }
+    .setup-section { margin-bottom: 24px; }
+    .setup-label {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: 3px; text-transform: uppercase; color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .opt-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+    .opt-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; padding: 14px; text-align: center; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .opt-card:hover { border-color: var(--accent); }
+    .opt-card.selected { border-color: var(--accent2); background: rgba(78,128,152,0.1); }
+    .opt-card .opt-name {
+      font-family: 'Bebas Neue', sans-serif; font-size: 20px;
+      letter-spacing: 2px; color: var(--text);
+    }
+    .opt-card .opt-desc {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      color: var(--muted); margin-top: 3px;
+    }
+    .start-btn {
+      font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 4px;
+      padding: 18px; width: 100%; border-radius: 4px; border: none;
+      background: var(--accent2); color: white; cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s; margin-top: 8px;
+    }
+    .start-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* Not enough data warning */
+    .no-data-notice {
+      background: var(--surface); border: 1px solid var(--yellow);
+      border-left: 3px solid var(--yellow); border-radius: 4px;
+      padding: 14px 18px; margin-bottom: 16px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--yellow);
+      display: none;
+    }
+    .no-data-notice.show { display: block; }
+
+    .game-screen { display: none; }
+    .game-screen.show { display: block; }
+    #setup-screen.hide { display: none; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="topnav">
+    <a href="index.html" class="back-btn">← HOME</a>
+    <div class="page-title">SMART STUDY</div>
+    <a href="stats.html" class="back-btn">📊 STATS</a>
+  </div>
+
+  <!-- Setup -->
+  <div id="setup-screen">
+    <div class="setup-title">SMART STUDY</div>
+    <div class="setup-sub">
+      Analyzes your stats and automatically serves you more questions<br>
+      from your weakest subjects. The worse you are at something, the more you see it.
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-label">Question Level</div>
+      <div class="opt-grid">
+        <div class="opt-card selected" data-level="MS" onclick="selectOpt(this,'level')">
+          <div class="opt-name">MS</div><div class="opt-desc">Middle school</div>
+        </div>
+        <div class="opt-card" data-level="HS" onclick="selectOpt(this,'level')">
+          <div class="opt-name">HS</div><div class="opt-desc">High school</div>
+        </div>
+        <div class="opt-card" data-level="All" onclick="selectOpt(this,'level')">
+          <div class="opt-name">BOTH</div><div class="opt-desc">Mixed</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="start-btn" onclick="startSession()">START SMART STUDY</button>
+  </div>
+
+  <!-- Game -->
+  <div id="game-screen" class="game-screen">
+
+    <!-- No data notice -->
+    <div class="no-data-notice" id="no-data-notice">
+      ⚠ Not enough history yet — serving random questions. Keep answering and Smart Study will learn your weak spots.
+    </div>
+
+    <!-- Subject breakdown -->
+    <div class="breakdown-panel">
+      <div class="breakdown-header">
+        <span>YOUR WEAK SPOTS</span>
+        <span id="total-answered">0 answered</span>
+      </div>
+      <div id="subject-bars"></div>
+    </div>
+
+    <!-- Current focus -->
+    <div class="focus-banner">
+      <div>
+        <div class="focus-label">Currently Targeting</div>
+        <div class="focus-subject" id="focus-subject">—</div>
+      </div>
+      <div class="focus-reason" id="focus-reason">—</div>
+    </div>
+
+    <!-- Session counter -->
+    <div class="session-counter" id="session-counter">Session: 0 answered · 0 correct</div>
+
+    <!-- Question card -->
+    <div class="question-card" id="question-card">
+      <div class="q-meta">
+        <span class="q-badge" id="q-badge">TOSS-UP</span>
+        <span class="q-subject-tag" id="q-subject">—</span>
+        <span class="q-type-tag" id="q-type">—</span>
+      </div>
+      <div class="question-text" id="question-text">—</div>
+      <div class="choices" id="choices-area" style="display:none"></div>
+      <div class="short-answer-area" id="sa-area" style="display:none">
+        <input class="answer-input" id="answer-input" type="text" placeholder="Type your answer and press Enter..."/>
+      </div>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+    <div class="answer-reveal" id="answer-reveal">Correct answer: <strong id="reveal-text"></strong></div>
+
+    <div class="action-row" id="action-row">
+      <button class="action-btn btn-secondary" id="bonus-btn" onclick="showBonus()" style="display:none">▸ Attempt Bonus</button>
+      <button class="action-btn btn-primary" id="next-btn" onclick="nextQuestion()">NEXT →</button>
+    </div>
+
+    <div style="text-align:center;margin-top:8px">
+      <button class="back-btn" onclick="endSession()">END SESSION</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="questions.js"></script>
+<script src="stats.js"></script>
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const ALL_SUBJECTS = [
+  'Life Science','Physical Science','Earth and Space',
+  'Energy','Math','Mathematics','General Science','Biology','Chemistry','Physics'
+];
+
+// Normalized subject groups (merge Math/Mathematics, Bio/Life Science etc)
+const SUBJECT_GROUPS = {
+  'Life Science':     ['Life Science','Biology'],
+  'Physical Science': ['Physical Science','Chemistry','Physics'],
+  'Earth and Space':  ['Earth and Space'],
+  'Energy':           ['Energy'],
+  'Math':             ['Math','Mathematics'],
+  'General Science':  ['General Science'],
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let level        = 'MS';
+let questionPool = {};   // subject -> shuffled questions
+let currentQ     = null;
+let isBonus      = false;
+let tossupCorrect = false;
+
+// Session stats
+let sessionAnswered = 0;
+let sessionCorrect  = 0;
+
+// Live accuracy tracking (combines historical + session)
+let subjectStats = {}; // subject -> { correct, total }
+
+function selectOpt(el, group) {
+  document.querySelectorAll(`[data-${group}]`).forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  if (group === 'level') level = el.dataset.level;
+}
+
+// ── Smart question picker ─────────────────────────────────────────────────────
+function buildWeights() {
+  // Load historical stats
+  const ps = Stats.getPracticeStats();
+  subjectStats = {};
+
+  Object.entries(SUBJECT_GROUPS).forEach(([group, aliases]) => {
+    let correct = 0, total = 0;
+    aliases.forEach(alias => {
+      const d = ps.bySubject[alias];
+      if (d) { correct += d.correct; total += d.total; }
+    });
+    subjectStats[group] = { correct, total };
+  });
+
+  const hasData = Object.values(subjectStats).some(s => s.total >= 3);
+  document.getElementById('no-data-notice').classList.toggle('show', !hasData);
+
+  // Weight = inverse accuracy (worse subjects get higher weight)
+  // If no data for a subject, give it a high weight (needs exploration)
+  const weights = {};
+  Object.entries(SUBJECT_GROUPS).forEach(([group]) => {
+    const s = subjectStats[group];
+    if (s.total < 3) {
+      weights[group] = 3.0; // unexplored — prioritize
+    } else {
+      const pct = s.correct / s.total;
+      weights[group] = Math.pow(1 - pct, 1.5) + 0.1; // worse = heavier
+    }
+  });
+
+  return weights;
+}
+
+function pickSubject(weights) {
+  const total = Object.values(weights).reduce((a,b) => a+b, 0);
+  let r = Math.random() * total;
+  for (const [subject, w] of Object.entries(weights)) {
+    r -= w;
+    if (r <= 0) return subject;
+  }
+  return Object.keys(weights)[0];
+}
+
+function getPoolForSubject(group) {
+  if (questionPool[group] && questionPool[group].length > 0) return questionPool[group];
+
+  const aliases = SUBJECT_GROUPS[group];
+  const lvl = level === 'All' ? undefined : level;
+  let qs = getAllQuestions(lvl).filter(q => aliases.includes(q.tossup.subject));
+  // Shuffle
+  for (let i = qs.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [qs[i], qs[j]] = [qs[j], qs[i]];
+  }
+  questionPool[group] = qs;
+  return qs;
+}
+
+// ── Session ───────────────────────────────────────────────────────────────────
+function startSession() {
+  questionPool    = {};
+  sessionAnswered = 0;
+  sessionCorrect  = 0;
+  isBonus         = false;
+
+  document.getElementById('setup-screen').classList.add('hide');
+  document.getElementById('game-screen').classList.add('show');
+
+  nextQuestion();
+}
+
+function nextQuestion() {
+  isBonus       = false;
+  tossupCorrect = false;
+
+  // Reset UI
+  document.getElementById('feedback').className       = 'feedback';
+  document.getElementById('answer-reveal').className  = 'answer-reveal';
+  document.getElementById('action-row').className     = 'action-row';
+  document.getElementById('choices-area').innerHTML   = '';
+  document.getElementById('choices-area').style.display = 'none';
+  document.getElementById('sa-area').style.display    = 'none';
+  document.getElementById('answer-input').value       = '';
+  document.getElementById('q-badge').className        = 'q-badge';
+
+  // Pick subject via weights
+  const weights = buildWeights();
+  const group   = pickSubject(weights);
+  const pool    = getPoolForSubject(group);
+
+  if (pool.length === 0) {
+    // Fallback — exhausted this subject pool
+    delete questionPool[group];
+    nextQuestion();
+    return;
+  }
+
+  currentQ = pool.pop();
+
+  // Update focus banner
+  const s  = subjectStats[group];
+  const pct = s && s.total >= 3 ? Math.round(s.correct / s.total * 100) : null;
+  document.getElementById('focus-subject').textContent = group.toUpperCase();
+  document.getElementById('focus-reason').textContent  = pct !== null
+    ? `Your accuracy: ${pct}% (${s.correct}/${s.total})`
+    : 'New subject — needs exploration';
+
+  renderQuestion(currentQ.tossup, false);
+  updateBreakdown();
+  updateCounter();
+}
+
+function renderQuestion(q, bonusMode) {
+  isBonus = bonusMode;
+  document.getElementById('q-badge').textContent  = bonusMode ? 'BONUS' : 'TOSS-UP';
+  document.getElementById('q-badge').className    = 'q-badge' + (bonusMode ? ' bonus-badge' : '');
+  document.getElementById('q-subject').textContent = q.subject;
+  document.getElementById('q-type').textContent   = q.type === 'Multiple Choice' ? 'MC' : 'SA';
+  document.getElementById('q-type').className     = 'q-type-tag ' + (q.type === 'Multiple Choice' ? 'mc' : 'sa');
+  document.getElementById('question-text').textContent = q.question;
+
+  document.getElementById('feedback').className      = 'feedback';
+  document.getElementById('answer-reveal').className = 'answer-reveal';
+  document.getElementById('action-row').className    = 'action-row';
+  document.getElementById('bonus-btn').style.display = 'none';
+
+  if (q.type === 'Multiple Choice' && q.choices) {
+    const area = document.getElementById('choices-area');
+    area.innerHTML = '';
+    area.style.display = 'flex';
+    document.getElementById('sa-area').style.display = 'none';
+    ['W','X','Y','Z'].forEach(letter => {
+      if (!q.choices[letter]) return;
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.innerHTML = `<span class="choice-letter">${letter}</span><span>${q.choices[letter]}</span>`;
+      btn.dataset.letter = letter;
+      btn.onclick = () => submitMC(letter, btn, q);
+      area.appendChild(btn);
+    });
+  } else {
+    document.getElementById('choices-area').style.display = 'none';
+    const sa = document.getElementById('sa-area');
+    sa.style.display = 'block';
+    const inp = document.getElementById('answer-input');
+    inp.value = ''; inp.disabled = false;
+    inp.className = 'answer-input';
+    setTimeout(() => inp.focus(), 50);
+    inp.onkeydown = e => { if (e.key === 'Enter') submitSA(q); };
+  }
+
+  // Animate card
+  const card = document.getElementById('question-card');
+  card.style.animation = 'none';
+  requestAnimationFrame(() => { card.style.animation = ''; });
+}
+
+// ── Answer handling ───────────────────────────────────────────────────────────
+function submitMC(letter, btn, q) {
+  const correct = letter === q.answer;
+  document.querySelectorAll('.choice-btn').forEach(b => {
+    b.disabled = true;
+    if (b.dataset.letter === q.answer) b.classList.add('correct');
+  });
+  if (!correct) btn.classList.add('wrong');
+  handleResult(correct, q);
+}
+
+function submitSA(q) {
+  const inp = document.getElementById('answer-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  inp.disabled = true;
+  const correct = checkAnswer(val, q);
+  inp.className = 'answer-input ' + (correct ? 'correct-input' : 'wrong-input');
+  if (!correct) {
+    document.getElementById('reveal-text').textContent = q.answer;
+    document.getElementById('answer-reveal').classList.add('show');
+  }
+  handleResult(correct, q);
+}
+
+function handleResult(correct, q) {
+  sessionAnswered++;
+  if (!isBonus) {
+    if (correct) sessionCorrect++;
+    tossupCorrect = correct;
+    // Record to stats
+    Stats.recordPracticeAnswer({ subject: q.subject, type: q.type, isBonus: false, correct });
+  } else {
+    if (correct) sessionCorrect++;
+    Stats.recordPracticeAnswer({ subject: q.subject, type: q.type, isBonus: true, correct });
+  }
+
+  const fb = document.getElementById('feedback');
+  fb.textContent  = correct ? '✓ Correct!' : '✗ Incorrect.';
+  fb.className    = `feedback show ${correct ? 'correct' : 'wrong'}`;
+
+  if (!correct && !isBonus) {
+    document.getElementById('reveal-text').textContent = q.answer;
+    document.getElementById('answer-reveal').classList.add('show');
+  }
+
+  // Show action buttons
+  const actionRow = document.getElementById('action-row');
+  actionRow.classList.add('show');
+
+  const bonusBtn = document.getElementById('bonus-btn');
+  if (!isBonus && tossupCorrect && currentQ.bonus && currentQ.bonus.question) {
+    bonusBtn.style.display = 'inline-block';
+  }
+
+  updateCounter();
+  updateBreakdown(); // re-render with fresh stats
+}
+
+function showBonus() {
+  document.getElementById('bonus-btn').style.display = 'none';
+  renderQuestion(currentQ.bonus, true);
+}
+
+// ── UI ────────────────────────────────────────────────────────────────────────
+function updateBreakdown() {
+  const ps = Stats.getPracticeStats();
+  const container = document.getElementById('subject-bars');
+  container.innerHTML = '';
+
+  // Sort by worst accuracy first
+  const entries = Object.entries(SUBJECT_GROUPS).map(([group, aliases]) => {
+    let correct = 0, total = 0;
+    aliases.forEach(alias => {
+      const d = ps.bySubject[alias];
+      if (d) { correct += d.correct; total += d.total; }
+    });
+    const pct = total > 0 ? Math.round(correct / total * 100) : null;
+    return { group, correct, total, pct };
+  }).filter(e => e.total > 0).sort((a, b) => (a.pct ?? 50) - (b.pct ?? 50));
+
+  document.getElementById('total-answered').textContent =
+    `${entries.reduce((s,e) => s+e.total, 0)} answered`;
+
+  entries.forEach(({ group, pct, total }) => {
+    const barClass = pct >= 70 ? 'good' : pct >= 40 ? 'mid' : 'bad';
+    const pctColor = pct >= 70 ? 'var(--green)' : pct >= 40 ? 'var(--yellow)' : 'var(--red)';
+    const row = document.createElement('div');
+    row.className = 'subject-row';
+    row.innerHTML = `
+      <span class="subject-name">${group}</span>
+      <div class="bar-wrap"><div class="bar-fill ${barClass}" style="width:${pct ?? 0}%"></div></div>
+      <span class="subject-pct" style="color:${pctColor}">${pct !== null ? pct+'%' : '?'}</span>`;
+    container.appendChild(row);
+  });
+
+  if (entries.length === 0) {
+    container.innerHTML = `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)">Answer questions to see your breakdown.</div>`;
+  }
+}
+
+function updateCounter() {
+  const acc = sessionAnswered > 0 ? Math.round(sessionCorrect/sessionAnswered*100) : 0;
+  document.getElementById('session-counter').textContent =
+    `Session: ${sessionAnswered} answered · ${sessionCorrect} correct · ${acc}% accuracy`;
+}
+
+function endSession() {
+  document.getElementById('game-screen').classList.remove('show');
+  document.getElementById('setup-screen').classList.remove('hide');
+  // Reset pools
+  questionPool = {};
+}
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.code === 'Enter') {
+    const nextBtn = document.getElementById('next-btn');
+    const actionRow = document.getElementById('action-row');
+    if (actionRow.classList.contains('show') && document.activeElement.tagName !== 'INPUT') {
+      nextQuestion();
+    }
+  }
+});
+</script>
+</body>
+</html>
