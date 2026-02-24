@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reaction Trainer – Science Bowl Bot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0d1b2a;
+      --surface: #1b263b91;
+      --surface2: #162535;
+      --border: #415a7793;
+      --accent: #778da9;
+      --accent2: #4e8098;
+      --text: #e8f0fe;
+      --muted: #e0e1dd;
+      --green: #00ff88;
+      --red: #ff4d6d;
+      --yellow: #ffd60a;
+      --words-per-minute: 160; /* proctor reading speed */
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px; opacity: 0.4; z-index: 0; pointer-events: none;
+    }
+
+    body::after {
+      content: ''; position: fixed; top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background:
+        radial-gradient(ellipse at 60% 40%, rgba(34,131,110,0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 30% 70%, rgba(78,128,152,0.10) 0%, transparent 60%);
+      z-index: 0; pointer-events: none;
+    }
+
+    .container {
+      position: relative; z-index: 1;
+      max-width: 800px; margin: 0 auto;
+      padding: 24px 24px 80px;
+    }
+
+    /* Top nav */
+    .topnav {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    .back-btn {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--muted); text-decoration: none;
+      border: 1px solid var(--border); padding: 6px 14px; border-radius: 2px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .back-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+    .page-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px; letter-spacing: 3px;
+    }
+
+    /* Stats bar */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px; margin-bottom: 24px;
+    }
+    @media (max-width: 500px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+
+    .stat-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; padding: 14px 12px; text-align: center;
+    }
+    .stat-box .val {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px; line-height: 1; color: var(--accent); display: block;
+    }
+    .stat-box .val.green { color: var(--green); }
+    .stat-box .val.yellow { color: var(--yellow); }
+    .stat-box .val.red { color: var(--red); }
+    .stat-box .lbl {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--muted); margin-top: 4px;
+    }
+
+    /* Question card */
+    .question-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; padding: 28px 28px 24px;
+      margin-bottom: 16px; min-height: 220px;
+      display: flex; flex-direction: column;
+      position: relative; overflow: hidden;
+    }
+
+    .q-meta {
+      display: flex; gap: 10px; align-items: center;
+      margin-bottom: 16px;
+    }
+    .q-badge {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+      border: 1px solid var(--accent2); color: var(--accent2);
+      padding: 3px 8px; border-radius: 2px;
+    }
+    .q-subject {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; color: var(--muted); letter-spacing: 1px;
+    }
+
+    /* The question text area */
+    .question-text {
+      font-size: 18px; line-height: 1.7;
+      color: var(--text); flex: 1;
+      min-height: 100px;
+    }
+
+    /* Each word fades in */
+    .word {
+      display: inline;
+      opacity: 0;
+      transition: opacity 0.08s ease;
+    }
+    .word.visible { opacity: 1; }
+    .word.highlighted { color: var(--yellow); }
+
+    /* Reading progress bar */
+    .reading-progress {
+      position: absolute; bottom: 0; left: 0;
+      height: 3px; background: var(--accent2);
+      width: 0%; transition: width 0.1s linear;
+      border-radius: 0 2px 2px 0;
+    }
+
+    /* Proctor label */
+    .proctor-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 8px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .proctor-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green);
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+    .proctor-dot.stopped { background: var(--red); animation: none; }
+
+    /* Buzz button */
+    .buzz-area {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .buzz-btn {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px; letter-spacing: 4px;
+      padding: 24px 0; width: 100%;
+      border-radius: 4px; border: 2px solid var(--accent2);
+      background: rgba(78,128,152,0.08); color: var(--accent2);
+      cursor: pointer; transition: all 0.1s;
+      animation: pulse 2s infinite;
+    }
+    .buzz-btn:hover { background: var(--accent2); color: white; }
+    .buzz-btn:active { transform: scale(0.98); }
+    .buzz-btn:disabled { opacity: 0.3; cursor: default; animation: none; }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(78,128,152,0.4); }
+      50%       { box-shadow: 0 0 0 10px rgba(78,128,152,0); }
+    }
+
+    .buzz-hint {
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+      color: var(--muted); display: flex; align-items: center; gap: 8px;
+    }
+    .key-badge {
+      display: inline-block; font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; color: var(--text); background: var(--surface2);
+      border: 1px solid var(--border); border-bottom: 3px solid var(--border);
+      border-radius: 4px; padding: 2px 10px;
+    }
+    @media (hover: none) { .buzz-hint-kb { display: none; } }
+
+    /* Answer area — shown after buzz */
+    .answer-area {
+      display: none;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 4px; padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+    .answer-area.show { display: block; }
+
+    .answer-input {
+      width: 100%; background: transparent; border: none;
+      border-bottom: 1px solid var(--border); padding: 8px 0;
+      color: var(--text); font-family: 'IBM Plex Mono', monospace;
+      font-size: 16px; outline: none; margin-bottom: 12px;
+    }
+    .answer-input:focus { border-bottom-color: var(--accent); }
+
+    .answer-choices {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .choice-btn {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); padding: 10px 20px; border-radius: 3px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+      cursor: pointer; transition: all 0.15s; flex: 1; min-width: 120px;
+      display: flex; gap: 10px; align-items: center;
+    }
+    .choice-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .choice-btn.correct { border-color: var(--green); color: var(--green); background: rgba(0,255,136,0.05); }
+    .choice-btn.wrong   { border-color: var(--red);   color: var(--red);   background: rgba(255,77,109,0.05); }
+    .choice-btn:disabled { cursor: default; }
+    .choice-letter { font-weight: 600; }
+
+    /* Feedback */
+    .feedback {
+      font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+      padding: 12px 16px; border-radius: 3px; margin-bottom: 16px;
+      display: none; align-items: center; gap: 12px;
+    }
+    .feedback.show { display: flex; }
+    .feedback.correct { color: var(--green); background: rgba(0,255,136,0.06); border: 1px solid var(--green); }
+    .feedback.wrong   { color: var(--red);   background: rgba(255,77,109,0.06); border: 1px solid var(--red); }
+    .feedback.timeout { color: var(--yellow); background: rgba(255,214,10,0.06); border: 1px solid var(--yellow); }
+
+    /* Buzz timing indicator */
+    .buzz-timing {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px; color: var(--accent);
+    }
+    .buzz-timing.fast { color: var(--green); }
+    .buzz-timing.mid  { color: var(--yellow); }
+    .buzz-timing.slow { color: var(--red); }
+
+    /* Action row */
+    .action-row {
+      display: none; justify-content: center; gap: 12px;
+      margin-bottom: 16px;
+    }
+    .action-row.show { display: flex; }
+
+    .action-btn {
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+      letter-spacing: 2px; text-transform: uppercase;
+      padding: 10px 24px; border-radius: 3px; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-next {
+      background: var(--accent2); border: 1px solid var(--accent2); color: white;
+    }
+    .btn-next:hover { opacity: 0.85; }
+
+    /* Answer reveal */
+    .answer-reveal {
+      font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+      color: var(--muted); margin-top: 10px; display: none;
+    }
+    .answer-reveal.show { display: block; }
+    .answer-reveal strong { color: var(--text); }
+
+    /* Setup overlay */
+    .setup-screen {
+      text-align: center; padding: 40px 20px;
+    }
+    .setup-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 48px; letter-spacing: 4px; margin-bottom: 8px;
+    }
+    .setup-sub {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px; color: var(--muted); letter-spacing: 2px;
+      margin-bottom: 40px;
+    }
+
+    .setup-section {
+      margin-bottom: 28px; text-align: left;
+    }
+    .setup-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 12px;
+    }
+    .option-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    }
+    @media (max-width: 500px) { .option-grid { grid-template-columns: repeat(2,1fr); } }
+
+    .option-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; padding: 16px 12px; text-align: center;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .option-card:hover { border-color: var(--accent); }
+    .option-card.selected { border-color: var(--accent2); background: rgba(78,128,152,0.1); }
+    .option-card .opt-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px; letter-spacing: 2px; color: var(--text);
+    }
+    .option-card .opt-desc {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; color: var(--muted); margin-top: 4px;
+    }
+
+    .start-btn {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px; letter-spacing: 4px;
+      padding: 18px 60px; border-radius: 4px;
+      border: none; background: var(--accent2); color: white;
+      cursor: pointer; margin-top: 8px;
+      transition: opacity 0.15s, transform 0.1s;
+      width: 100%;
+    }
+    .start-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* Session summary */
+    .summary-screen { display: none; text-align: center; padding: 40px 20px; }
+    .summary-screen.show { display: block; }
+    .summary-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 48px; letter-spacing: 4px; margin-bottom: 32px;
+    }
+    .summary-grid {
+      display: grid; grid-template-columns: repeat(2,1fr); gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    /* Speed meter */
+    .speed-meter {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; padding: 20px;
+      margin-bottom: 16px;
+    }
+    .speed-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 12px;
+      display: flex; justify-content: space-between;
+    }
+    .speed-bar-wrap {
+      height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;
+    }
+    .speed-bar-fill {
+      height: 100%; border-radius: 4px;
+      background: linear-gradient(90deg, var(--green), var(--yellow), var(--red));
+      transition: width 0.5s ease;
+    }
+    .speed-markers {
+      display: flex; justify-content: space-between;
+      font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+      color: var(--muted); margin-top: 6px;
+    }
+
+    .game-screen { display: none; }
+    .game-screen.show { display: block; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="topnav">
+    <a href="index.html" class="back-btn">← HOME</a>
+    <div class="page-title">REACTION TRAINER</div>
+    <a href="stats.html" class="back-btn">📊 STATS</a>
+  </div>
+
+  <!-- ── SETUP SCREEN ── -->
+  <div id="setup-screen">
+    <div class="setup-section">
+      <div class="setup-label">Question Level</div>
+      <div class="option-grid">
+        <div class="option-card selected" data-level="MS" onclick="selectOpt(this,'level')">
+          <div class="opt-name">MS</div>
+          <div class="opt-desc">Middle school</div>
+        </div>
+        <div class="option-card" data-level="HS" onclick="selectOpt(this,'level')">
+          <div class="opt-name">HS</div>
+          <div class="opt-desc">High school</div>
+        </div>
+        <div class="option-card" data-level="All" onclick="selectOpt(this,'level')">
+          <div class="opt-name">BOTH</div>
+          <div class="opt-desc">Mixed</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-label">Proctor Speed</div>
+      <div class="option-grid">
+        <div class="option-card" data-speed="140" onclick="selectOpt(this,'speed')">
+          <div class="opt-name">SLOW</div>
+          <div class="opt-desc">140 words/min</div>
+        </div>
+        <div class="option-card selected" data-speed="160" onclick="selectOpt(this,'speed')">
+          <div class="opt-name">NORMAL</div>
+          <div class="opt-desc">160 words/min</div>
+        </div>
+        <div class="option-card" data-speed="180" onclick="selectOpt(this,'speed')">
+          <div class="opt-name">FAST</div>
+          <div class="opt-desc">180 words/min</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-label">Subject Filter</div>
+      <div class="option-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="option-card selected" data-subject="All" onclick="selectOpt(this,'subject')">
+          <div class="opt-name" style="font-size:16px">ALL</div>
+        </div>
+        <div class="option-card" data-subject="Life Science" onclick="selectOpt(this,'subject')">
+          <div class="opt-name" style="font-size:14px">BIO</div>
+        </div>
+        <div class="option-card" data-subject="Physical Science" onclick="selectOpt(this,'subject')">
+          <div class="opt-name" style="font-size:14px">CHEM/PHYS</div>
+        </div>
+        <div class="option-card" data-subject="Earth and Space" onclick="selectOpt(this,'subject')">
+          <div class="opt-name" style="font-size:14px">EARTH</div>
+        </div>
+        <div class="option-card" data-subject="Math" onclick="selectOpt(this,'subject')">
+          <div class="opt-name" style="font-size:14px">MATH</div>
+        </div>
+        <div class="option-card" data-subject="Energy" onclick="selectOpt(this,'subject')">
+          <div class="opt-name" style="font-size:14px">ENERGY</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="start-btn" onclick="startSession()">START TRAINING</button>
+  </div>
+
+  <!-- ── GAME SCREEN ── -->
+  <div id="game-screen" class="game-screen">
+
+    <!-- Live stats -->
+    <div class="stats-row">
+      <div class="stat-box">
+        <span class="val" id="stat-avg">—</span>
+        <span class="lbl">Avg Buzz (s)</span>
+      </div>
+      <div class="stat-box">
+        <span class="val green" id="stat-best">—</span>
+        <span class="lbl">Best Buzz (s)</span>
+      </div>
+      <div class="stat-box">
+        <span class="val yellow" id="stat-acc">—</span>
+        <span class="lbl">Accuracy</span>
+      </div>
+      <div class="stat-box">
+        <span class="val" id="stat-count">0</span>
+        <span class="lbl">Questions</span>
+      </div>
+    </div>
+
+    <!-- Speed meter -->
+    <div class="speed-meter">
+      <div class="speed-label">
+        <span>BUZZ SPEED</span>
+        <span id="pct-label">—</span>
+      </div>
+      <div class="speed-bar-wrap">
+        <div class="speed-bar-fill" id="speed-bar" style="width:0%"></div>
+      </div>
+      <div class="speed-markers">
+        <span>0%</span><span>Early</span><span>Mid</span><span>Late</span><span>100%</span>
+      </div>
+    </div>
+
+    <!-- Proctor label -->
+    <div class="proctor-label">
+      <div class="proctor-dot" id="proctor-dot"></div>
+      <span id="proctor-status">PROCTOR READING...</span>
+    </div>
+
+    <!-- Question card -->
+    <div class="question-card" id="question-card">
+      <div class="q-meta">
+        <span class="q-badge">TOSS-UP</span>
+        <span class="q-subject" id="q-subject">—</span>
+      </div>
+      <div class="question-text" id="question-text"></div>
+      <div class="reading-progress" id="reading-progress"></div>
+    </div>
+
+    <!-- Buzz button -->
+    <div class="buzz-area" id="buzz-area">
+      <button class="buzz-btn" id="buzz-btn" onclick="playerBuzz()">⚡ BUZZ IN</button>
+      <div class="buzz-hint">
+        <span class="buzz-hint-kb"><span class="key-badge">SPACE</span> to buzz ·</span>
+        <span>Buzz as early as you can!</span>
+      </div>
+    </div>
+
+    <!-- Answer area -->
+    <div class="answer-area" id="answer-area">
+      <div id="sa-wrap" style="display:none">
+        <input class="answer-input" id="answer-input" type="text" placeholder="Type your answer and press Enter..."/>
+      </div>
+      <div class="answer-choices" id="mc-choices"></div>
+    </div>
+
+    <!-- Feedback -->
+    <div class="feedback" id="feedback">
+      <span class="buzz-timing" id="buzz-timing-label"></span>
+      <span id="feedback-text"></span>
+    </div>
+    <div class="answer-reveal" id="answer-reveal">
+      Correct answer: <strong id="reveal-text"></strong>
+    </div>
+
+    <!-- Actions -->
+    <div class="action-row" id="action-row">
+      <button class="action-btn btn-next" onclick="nextQuestion()">NEXT QUESTION →</button>
+    </div>
+
+    <div style="text-align:center;margin-top:16px">
+      <button class="back-btn" onclick="endSession()" style="cursor:pointer">END SESSION</button>
+    </div>
+  </div>
+
+  <!-- ── SUMMARY SCREEN ── -->
+  <div id="summary-screen" class="summary-screen">
+    <div class="summary-title">SESSION COMPLETE</div>
+    <div class="stats-row">
+      <div class="stat-box"><span class="val" id="sum-avg">—</span><span class="lbl">Avg Buzz (s)</span></div>
+      <div class="stat-box"><span class="val green" id="sum-best">—</span><span class="lbl">Best Buzz (s)</span></div>
+      <div class="stat-box"><span class="val yellow" id="sum-acc">—</span><span class="lbl">Accuracy</span></div>
+      <div class="stat-box"><span class="val" id="sum-count">—</span><span class="lbl">Questions</span></div>
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center;margin-top:8px">
+      <button class="start-btn" style="max-width:220px" onclick="restartSession()">TRAIN AGAIN</button>
+      <a href="index.html" class="start-btn" style="max-width:220px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center">HOME</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="questions.js"></script>
+<script src="stats.js"></script>
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+let level   = 'MS';
+let wpm     = 160;
+let subject = 'All';
+
+// ── Session state ────────────────────────────────────────────────────────────
+let pool        = [];
+let currentQ    = null;
+let wordTimers  = [];
+let readStart   = null;   // when proctor started reading
+let buzzTime    = null;   // when player buzzed (ms into reading)
+let totalWords  = 0;      // total words in current question
+let wordsRead   = 0;      // how many words revealed when buzzed
+let gamePhase   = 'idle'; // idle | reading | buzzed | result
+
+// ── Session stats ────────────────────────────────────────────────────────────
+let sessionBuzzTimes = []; // % into question when buzzed
+let sessionCorrect   = 0;
+let sessionTotal     = 0;
+
+// ── Setup ────────────────────────────────────────────────────────────────────
+function selectOpt(el, group) {
+  document.querySelectorAll(`[data-${group}]`).forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  if (group === 'level')   level   = el.dataset.level;
+  if (group === 'speed')   wpm     = parseInt(el.dataset.speed);
+  if (group === 'subject') subject = el.dataset.subject;
+}
+
+function startSession() {
+  // Build pool
+  const lvl = level === 'All' ? undefined : level;
+  let all = getAllQuestions(lvl);
+  if (subject !== 'All') all = all.filter(q => q.tossup.subject === subject);
+  pool = all;
+
+  sessionBuzzTimes = [];
+  sessionCorrect   = 0;
+  sessionTotal     = 0;
+
+  document.getElementById('setup-screen').style.display    = 'none';
+  document.getElementById('summary-screen').classList.remove('show');
+  document.getElementById('game-screen').classList.add('show');
+
+  nextQuestion();
+}
+
+// ── Question flow ─────────────────────────────────────────────────────────────
+function nextQuestion() {
+  if (pool.length === 0) { endSession(); return; }
+
+  // Reset UI
+  clearWordTimers();
+  document.getElementById('buzz-area').style.display    = 'flex';
+  document.getElementById('buzz-btn').disabled          = false;
+  document.getElementById('answer-area').classList.remove('show');
+  document.getElementById('feedback').classList.remove('show', 'correct', 'wrong', 'timeout');
+  document.getElementById('answer-reveal').classList.remove('show');
+  document.getElementById('action-row').classList.remove('show');
+  document.getElementById('mc-choices').innerHTML       = '';
+  document.getElementById('sa-wrap').style.display      = 'none';
+  document.getElementById('reading-progress').style.width = '0%';
+  document.getElementById('proctor-dot').classList.remove('stopped');
+  document.getElementById('proctor-status').textContent  = 'PROCTOR READING...';
+
+  currentQ   = pool.pop();
+  gamePhase  = 'reading';
+  buzzTime   = null;
+  wordsRead  = 0;
+
+  const q = currentQ.tossup;
+  document.getElementById('q-subject').textContent = q.subject;
+
+  // Build word spans
+  const words = q.question.split(' ').filter(w => w);
+  totalWords  = words.length;
+  const container = document.getElementById('question-text');
+  container.innerHTML = '';
+
+  words.forEach((word, i) => {
+    const span = document.createElement('span');
+    span.className = 'word';
+    span.textContent = word + ' ';
+    span.id = `word-${i}`;
+    container.appendChild(span);
+  });
+
+  // Reveal words at wpm rate
+  const msPerWord = (60 / wpm) * 1000;
+  readStart = Date.now();
+
+  words.forEach((_, i) => {
+    const t = setTimeout(() => {
+      const span = document.getElementById(`word-${i}`);
+      if (span) span.classList.add('visible');
+      wordsRead = i + 1;
+
+      // Update progress bar
+      const pct = ((i + 1) / totalWords) * 100;
+      document.getElementById('reading-progress').style.width = pct + '%';
+
+      // All words revealed — reading done
+      if (i === totalWords - 1) {
+        readingDone();
+      }
+    }, i * msPerWord);
+    wordTimers.push(t);
+  });
+}
+
+function readingDone() {
+  if (gamePhase !== 'reading') return;
+  // Player never buzzed — auto fail
+  document.getElementById('proctor-dot').classList.add('stopped');
+  document.getElementById('proctor-status').textContent = 'READING COMPLETE';
+  document.getElementById('buzz-btn').disabled = true;
+  gamePhase = 'result';
+  sessionTotal++;
+
+  showFeedback('timeout', '⏱ Too slow — question finished before you buzzed.', null);
+  showReveal(currentQ.tossup.answer);
+  document.getElementById('action-row').classList.add('show');
+  updateLiveStats(null);
+}
+
+function clearWordTimers() {
+  wordTimers.forEach(t => clearTimeout(t));
+  wordTimers = [];
+}
+
+// ── Buzz ──────────────────────────────────────────────────────────────────────
+function playerBuzz() {
+  if (gamePhase !== 'reading') return;
+  gamePhase = 'buzzed';
+
+  clearWordTimers();
+  buzzTime  = Date.now() - readStart;
+
+  // Stop proctor dot
+  document.getElementById('proctor-dot').classList.add('stopped');
+  document.getElementById('proctor-status').textContent = 'BUZZED!';
+  document.getElementById('buzz-area').style.display = 'none';
+
+  // Show all words that were visible, highlight the word we're on
+  const allWords = document.querySelectorAll('.word');
+  allWords.forEach((w, i) => {
+    if (i < wordsRead) w.classList.add('visible');
+    if (i === wordsRead - 1) w.classList.add('highlighted');
+  });
+  document.getElementById('reading-progress').style.width =
+    ((wordsRead / totalWords) * 100) + '%';
+
+  // Show answer input
+  const q = currentQ.tossup;
+  document.getElementById('answer-area').classList.add('show');
+
+  if (q.type === 'Multiple Choice' && q.choices) {
+    const mc = document.getElementById('mc-choices');
+    ['W','X','Y','Z'].forEach(letter => {
+      if (!q.choices[letter]) return;
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.innerHTML = `<span class="choice-letter">${letter}</span><span>${q.choices[letter]}</span>`;
+      btn.dataset.letter = letter;
+      btn.onclick = () => submitMC(letter, btn);
+      mc.appendChild(btn);
+    });
+  } else {
+    const sa = document.getElementById('sa-wrap');
+    sa.style.display = 'block';
+    const inp = document.getElementById('answer-input');
+    inp.value = '';
+    inp.disabled = false;
+    inp.className = 'answer-input';
+    setTimeout(() => inp.focus(), 50);
+    inp.onkeydown = e => { if (e.key === 'Enter') submitSA(); };
+  }
+}
+
+// ── Answer submission ─────────────────────────────────────────────────────────
+function submitMC(letter, btn) {
+  if (gamePhase !== 'buzzed') return;
+  gamePhase = 'result';
+
+  const q = currentQ.tossup;
+  const correct = letter === q.answer;
+
+  document.querySelectorAll('.choice-btn').forEach(b => {
+    b.disabled = true;
+    if (b.dataset.letter === q.answer) b.classList.add('correct');
+  });
+  if (!correct) btn.classList.add('wrong');
+
+  handleResult(correct);
+}
+
+function submitSA() {
+  if (gamePhase !== 'buzzed') return;
+  const inp = document.getElementById('answer-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  gamePhase = 'result';
+  inp.disabled = true;
+
+  const correct = checkAnswer(val, currentQ.tossup);
+  inp.className = 'answer-input ' + (correct ? 'correct' : 'wrong');
+  handleResult(correct);
+}
+
+function handleResult(correct) {
+  const pctRead = wordsRead / totalWords;
+  sessionTotal++;
+  if (correct) sessionCorrect++;
+  sessionBuzzTimes.push(pctRead);
+
+  // Buzz timing label
+  const secs = (buzzTime / 1000).toFixed(2);
+  const pctPct = Math.round(pctRead * 100);
+  const timingClass = pctRead < 0.4 ? 'fast' : pctRead < 0.7 ? 'mid' : 'slow';
+  const timingLabel = pctRead < 0.4 ? '⚡ EARLY' : pctRead < 0.7 ? '✓ MID' : '⚠ LATE';
+
+  document.getElementById('buzz-timing-label').textContent = `${secs}s · ${pctPct}% read`;
+  document.getElementById('buzz-timing-label').className   = `buzz-timing ${timingClass}`;
+
+  const msg = correct
+    ? `Correct! You buzzed at ${pctPct}% of the question. ${timingLabel}`
+    : `Wrong answer. ${timingLabel}`;
+
+  showFeedback(correct ? 'correct' : 'wrong', msg, null);
+  if (!correct) showReveal(currentQ.tossup.answer);
+
+  document.getElementById('action-row').classList.add('show');
+  updateLiveStats(pctRead);
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function showFeedback(type, msg) {
+  const el = document.getElementById('feedback');
+  document.getElementById('feedback-text').textContent = msg;
+  el.className = `feedback show ${type}`;
+}
+
+function showReveal(answer) {
+  document.getElementById('reveal-text').textContent = answer;
+  document.getElementById('answer-reveal').classList.add('show');
+}
+
+function updateLiveStats(pctRead) {
+  const avg  = sessionBuzzTimes.length
+    ? (sessionBuzzTimes.reduce((a,b) => a+b, 0) / sessionBuzzTimes.length * 100).toFixed(0) + '%'
+    : '—';
+  const best = sessionBuzzTimes.length
+    ? Math.min(...sessionBuzzTimes) * 100
+    : null;
+  const acc  = sessionTotal > 0
+    ? Math.round(sessionCorrect / sessionTotal * 100) + '%'
+    : '—';
+
+  document.getElementById('stat-avg').textContent   = avg;
+  document.getElementById('stat-best').textContent  = best !== null ? best.toFixed(0) + '%' : '—';
+  document.getElementById('stat-acc').textContent   = acc;
+  document.getElementById('stat-count').textContent = sessionTotal;
+
+  // Speed bar — shows where in the question you buzzed
+  if (pctRead !== null) {
+    const pct = Math.round(pctRead * 100);
+    document.getElementById('speed-bar').style.width = pct + '%';
+    document.getElementById('pct-label').textContent = `Buzzed at ${pct}% of question`;
+
+    // Color the stat boxes based on buzz timing
+    const avgEl = document.getElementById('stat-avg');
+    const avgPct = parseFloat(avg);
+    avgEl.className = 'val ' + (avgPct < 40 ? 'green' : avgPct < 70 ? 'yellow' : 'red');
+  }
+}
+
+// ── Session end ───────────────────────────────────────────────────────────────
+function endSession() {
+  clearWordTimers();
+  document.getElementById('game-screen').classList.remove('show');
+
+  const avg  = sessionBuzzTimes.length
+    ? (sessionBuzzTimes.reduce((a,b) => a+b, 0) / sessionBuzzTimes.length * 100).toFixed(0) + '%'
+    : '—';
+  const best = sessionBuzzTimes.length
+    ? Math.min(...sessionBuzzTimes) * 100
+    : null;
+  const acc  = sessionTotal > 0 ? Math.round(sessionCorrect / sessionTotal * 100) + '%' : '—';
+
+  document.getElementById('sum-avg').textContent   = avg;
+  document.getElementById('sum-best').textContent  = best !== null ? best.toFixed(0) + '%' : '—';
+  document.getElementById('sum-acc').textContent   = acc;
+  document.getElementById('sum-count').textContent = sessionTotal;
+
+  document.getElementById('summary-screen').classList.add('show');
+}
+
+function restartSession() {
+  document.getElementById('summary-screen').classList.remove('show');
+  document.getElementById('setup-screen').style.display = 'block';
+}
+
+// ── Keyboard ──────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && gamePhase === 'reading') {
+    e.preventDefault();
+    playerBuzz();
+  }
+  if (e.code === 'Enter' && gamePhase === 'buzzed') {
+    const sa = document.getElementById('answer-input');
+    if (document.getElementById('sa-wrap').style.display !== 'none' && document.activeElement !== sa) {
+      submitSA();
+    }
+  }
+});
+</script>
+</body>
+</html>
