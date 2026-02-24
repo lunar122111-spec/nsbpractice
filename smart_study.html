@@ -572,12 +572,10 @@ function handleResult(correct, q) {
   fb.textContent  = correct ? '✓ Correct!' : '✗ Incorrect.';
   fb.className    = `feedback show ${correct ? 'correct' : 'wrong'}`;
 
-  // Always show correct answer when wrong
-  if (!correct) {
-    const q = isBonus ? currentQ.bonus : currentQ.tossup;
-    document.getElementById('reveal-text').textContent = q.answer;
-    document.getElementById('answer-reveal').classList.add('show');
-  }
+  // Always show the correct answer
+  const qRef = isBonus ? currentQ.bonus : currentQ.tossup;
+  document.getElementById('reveal-text').textContent = qRef.answer;
+  document.getElementById('answer-reveal').classList.add('show');
 
   // Show action buttons
   const actionRow = document.getElementById('action-row');
