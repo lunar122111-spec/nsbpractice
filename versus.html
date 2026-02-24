@@ -567,6 +567,14 @@
     .log-item .log-result.bot-got  { color: var(--accent2); }
     .log-item .log-result.nobody   { color: var(--muted); }
   </style>
+  <!-- MathJax for math rendering -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$']] },
+      options: { skipHtmlTags: ['script','noscript','style','textarea'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
 </head>
 <body>
 <div class="container">
