@@ -1,72 +1,176 @@
 import requests, pdfplumber, json, re, os, time
 
-BASE = "https://science.osti.gov"
+BASE = "https://science.osti.gov/-/media/wdts/nsb/pdf"
 
-# ── MS Sets ────────────────────────────────────────────────────────────────────
-# Each entry: (set_num, round_label, url)
 PDF_LIST = []
 
-# MS Set 1 — m_round01.pdf … m_round18.pdf
+# ── MS Sets ────────────────────────────────────────────────────────────────────
+
+# MS Set 1 — m_round01.pdf (18 rounds)
 for r in range(1, 19):
-    PDF_LIST.append(("MS", 1, f"{r:02d}A",
-        f"{BASE}/-/media/wdts/nsb/pdf/MS-Sample-Questions/Sample-Set-1/m_round{r:02d}.pdf"))
+    PDF_LIST.append(("MS", 1, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-1/m_round{r:02d}.pdf"))
 
-# MS Set 13 (2019) — 2019-NSB-MSR-Round-{n}A.pdf
-for r in range(1, 18):
-    PDF_LIST.append(("MS", 13, f"{r:02d}A",
-        f"{BASE}/-/media/wdts/nsb/pdf/MS-Sample-Questions/Sample-Set-13/2019-NSB-MSR-Round-{r}A.pdf"))
+# MS Set 2 — sample_questions_r{n}.pdf (10 rounds)
+for r in range(1, 11):
+    PDF_LIST.append(("MS", 2, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-2/sample_questions_r{r}.pdf"))
 
-# MS Set 14 (2020) — 2020-MS-Rd{n}.pdf
-for r in range(1, 18):
-    PDF_LIST.append(("MS", 14, f"{r:02d}A",
-        f"{BASE}/-/media/wdts/nsb/pdf/MS-Sample-Questions/Sample-Set-14/2020-MS-Rd{r}.pdf"))
+# MS Set 3 — Round-{n}C-MS.pdf (15 rounds)
+for r in range(1, 16):
+    PDF_LIST.append(("MS", 3, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-3/Round-{r}C-MS.pdf"))
 
-# MS Set 15 (2021) — Set-{n}-MS-2021.pdf
+# MS Set 4 — Round{n}.pdf (17 rounds)
 for r in range(1, 18):
-    PDF_LIST.append(("MS", 15, f"{r:02d}A",
-        f"{BASE}/-/media/wdts/nsb/pdf/MS-Sample-Questions/Sample-Set-15/Set-{r}-MS-2021.pdf"))
+    PDF_LIST.append(("MS", 4, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-4/Round{r}.pdf"))
 
-# MS Set 16 (2022) — try both patterns
-for r in range(1, 18):
-    PDF_LIST.append(("MS", 16, f"{r:02d}A",
-        f"{BASE}/-/media/wdts/nsb/pdf/MS-Sample-Questions/Sample-Set-16/Set-{r}-MS-2022.pdf"))
+# MS Set 5 — Round{n}.pdf (16 rounds)
+for r in range(1, 17):
+    PDF_LIST.append(("MS", 5, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-5/Round{r}.pdf"))
 
-# MS Set 17 (2023)
+# MS Set 6 — Round{n}.pdf (17 rounds)
 for r in range(1, 18):
-    PDF_LIST.append(("MS", 17, f"{r:02d}A",
-        f"{BASE}/-/media/wdts/nsb/pdf/MS-Sample-Questions/Sample-Set-17/Set-{r}-MS-2023.pdf"))
+    PDF_LIST.append(("MS", 6, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-6/Round{r}.pdf"))
+
+# MS Set 7 — MS_Round-{n}.pdf (15 rounds)
+for r in range(1, 16):
+    PDF_LIST.append(("MS", 7, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-7/MS_Round-{r}.pdf"))
+
+# MS Set 8 — Round-{n}-A.pdf (17 rounds)
+for r in range(1, 18):
+    PDF_LIST.append(("MS", 8, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-8/Round-{r}-A.pdf"))
+
+# MS Set 9 — RegionalMS_{n}.pdf (17 rounds)
+for r in range(1, 18):
+    PDF_LIST.append(("MS", 9, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-9/RegionalMS_{r}.pdf"))
+
+# MS Set 10 — {n}A_MS_Reg_2016.pdf (17 rounds)
+for r in range(1, 18):
+    PDF_LIST.append(("MS", 10, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-10/{r}A_MS_Reg_2016.pdf"))
+
+# MS Set 11 — MS_{n}.pdf (17 rounds) — note lowercase 'set' in URL
+for r in range(1, 18):
+    PDF_LIST.append(("MS", 11, r,
+        f"{BASE}/MS-Sample-Questions/Sample-set-11/MS_{r}.pdf"))
+
+# MS Set 12 — MSRound-{n}.pdf (17 rounds)
+for r in range(1, 18):
+    PDF_LIST.append(("MS", 12, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-12/MSRound-{r}.pdf"))
+
+# MS Set 13 (2019) — 2019-NSB-MSR-Round-{n}A.pdf (17 rounds)
+for r in range(1, 18):
+    PDF_LIST.append(("MS", 13, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-13/2019-NSB-MSR-Round-{r}A.pdf"))
+
+# MS Sample Rounds — Round Robin (rounds 2, 5)
+for r in [2, 5]:
+    PDF_LIST.append(("MS", "RR", r,
+        f"{BASE}/MS-Sample-Questions/Sample-Rounds/rr{r}_for_web.pdf"))
+
+# MS Sample Rounds — Double Elimination (rounds 1, 3)
+for r in [1, 3]:
+    PDF_LIST.append(("MS", "DE", r,
+        f"{BASE}/MS-Sample-Questions/Sample-Rounds/de{r}_for_web.pdf"))
+
+# MS Set 14 (2020) — 2020-MS-Rd{n}.pdf (17 rounds)
+for r in range(1, 18):
+    PDF_LIST.append(("MS", 14, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-14/2020-MS-Rd{r}.pdf"))
+
+# MS Set 15 (2021) — Set-{n}-MS-2021.pdf (10 rounds)
+for r in range(1, 11):
+    PDF_LIST.append(("MS", 15, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-15/Set-{r}-MS-2021.pdf"))
+
+# MS Set 16 (2022) — 2022-MS-{n}.pdf (9 rounds)
+for r in range(1, 10):
+    PDF_LIST.append(("MS", 16, r,
+        f"{BASE}/MS-Sample-Questions/Sample-Set-16/2022-MS-{r}.pdf"))
 
 # ── HS Sets ────────────────────────────────────────────────────────────────────
 
-# HS Set 1 — h_round01.pdf … h_round18.pdf
-for r in range(1, 19):
-    PDF_LIST.append(("HS", 1, f"{r:02d}A",
-        f"{BASE}/-/media/wdts/nsb/pdf/HS-Sample-Questions/Sample-Set-1/h_round{r:02d}.pdf"))
-
-# HS Set 13 (2019)
+# HS Sets 1–12 — round{n}.pdf
 for r in range(1, 18):
-    PDF_LIST.append(("HS", 13, f"{r:02d}A",
-        f"{BASE}/-/media/wdts/nsb/pdf/HS-Sample-Questions/Sample-Set-13/2019-NSB-HSR-Round-{r}A.pdf"))
+    PDF_LIST.append(("HS", 1, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-1/round{r}.pdf"))
 
-# HS Set 14 (2020)
-for r in range(1, 18):
-    PDF_LIST.append(("HS", 14, f"{r:02d}A",
-        f"{BASE}/-/media/wdts/nsb/pdf/HS-Sample-Questions/Sample-Set-14/2020-HS-Rd{r}.pdf"))
+for r in range(1, 16):
+    PDF_LIST.append(("HS", 2, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-2/round{r}.pdf"))
 
-# HS Set 15 (2021)
 for r in range(1, 18):
-    PDF_LIST.append(("HS", 15, f"{r:02d}A",
-        f"{BASE}/-/media/wdts/nsb/pdf/HS-Sample-Questions/Sample-Set-15/Set-{r}-HS-2021.pdf"))
+    PDF_LIST.append(("HS", 3, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-3/Round-{r}C.pdf"))
 
-# HS Set 16 (2022)
 for r in range(1, 18):
-    PDF_LIST.append(("HS", 16, f"{r:02d}A",
-        f"{BASE}/-/media/wdts/nsb/pdf/HS-Sample-Questions/Sample-Set-16/Set-{r}-HS-2022.pdf"))
+    PDF_LIST.append(("HS", 4, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-4/round{r}.pdf"))
 
-# HS Set 17 (2023)
+for r in range(1, 16):
+    PDF_LIST.append(("HS", 5, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-5/round{r}.pdf"))
+
+for r in range(1, 16):
+    PDF_LIST.append(("HS", 6, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-6/Sample6_ROUND{r}.pdf"))
+
 for r in range(1, 18):
-    PDF_LIST.append(("HS", 17, f"{r:02d}A",
-        f"{BASE}/-/media/wdts/nsb/pdf/HS-Sample-Questions/Sample-Set-17/Set-{r}-HS-2023.pdf"))
+    PDF_LIST.append(("HS", 7, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-7/ROUND-{r}.pdf"))
+
+for r in range(1, 18):
+    PDF_LIST.append(("HS", 8, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-8/Round-{r}-A.pdf"))
+
+for r in range(1, 18):
+    PDF_LIST.append(("HS", 9, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-9/RegionalHS_{r}.pdf"))
+
+for r in range(1, 18):
+    PDF_LIST.append(("HS", 10, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-10/{r}A_HS_Reg_2016.pdf"))
+
+for r in range(1, 18):
+    PDF_LIST.append(("HS", 11, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-11/HS_{r}.pdf"))
+
+for r in range(1, 18):
+    PDF_LIST.append(("HS", 12, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-12/2018-HSRound-{r}.pdf"))
+
+# HS Set 13 (2019) — rounds 1-6, 15-17
+for r in [1, 2, 3, 4, 5, 6, 15, 16, 17]:
+    PDF_LIST.append(("HS", 13, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-13/2019-NSB-HSR-Round-{r}A.pdf"))
+
+# HS Set 14 — rounds 7-14
+for r in range(7, 15):
+    PDF_LIST.append(("HS", 14, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-14/2019-NSB-HSR-Round-{r}A.pdf"))
+
+# HS Set 15 (2020) — 2020-HS-Rd{n}.pdf (17 rounds)
+for r in range(1, 18):
+    PDF_LIST.append(("HS", 15, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-15/2020-HS-Rd{r}.pdf"))
+
+# HS Set 16 (2021) — Set-{n}-HS-2021.pdf (10 rounds)
+for r in range(1, 11):
+    PDF_LIST.append(("HS", 16, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-16/Set-{r}-HS-2021.pdf"))
+
+# HS Set 17 (2022) — 2022-HS-{n}.pdf (15 rounds)
+for r in range(1, 16):
+    PDF_LIST.append(("HS", 17, r,
+        f"{BASE}/HS-Sample-Questions/Sample-Set-17/2022-HS-{r}.pdf"))
 
 SUBJECTS = ["Life Science","Physical Science","Earth and Space","Energy",
             "Mathematics","Math","General Science","Biology","Chemistry","Physics"]
@@ -78,7 +182,10 @@ JUNK = re.compile(
     r'|^\d+\)\s*$'
     r'|Regional Science Bowl'
     r'|National Science Bowl'
-    r'|Round\s+\d+\s+Page\s+\d+'
+    r'|Round\s+\d+\s*(Page\s+\d+)?'
+    r'|Page\s+\d+\s+of\s+\d+'
+    r'|^\s*Page\s+\d+'
+    r'|Science\s+Bowl\s+Sample'
     r'|^\s*.{1,3}\s*$',
     re.IGNORECASE
 )
@@ -156,7 +263,7 @@ def parse_block(text):
     # W) X) Y) Z) (MC choice) — everything else continues the previous line
     joined = []
     for line in body_lines:
-        if re.match(r'^[WXYZ]\)\s', line):
+        if re.match(r'^[WXYZ]\)', line):
             joined.append(line)   # new choice line
         elif joined:
             joined[-1] = joined[-1] + " " + line  # continuation
@@ -166,9 +273,13 @@ def parse_block(text):
     choices = {}
     question_parts = []
     for line in joined:
-        mc = re.match(r'^([WXYZ])\)\s+(.+)$', line)
+        # Match W) X) Y) Z) with optional space before content
+        mc = re.match(r'^([WXYZ])\)\s*(.+)$', line)
         if mc:
-            choices[mc.group(1)] = mc.group(2).strip()
+            choice_text = mc.group(2).strip()
+            # Strip any trailing answer leak like "ANSWER: X"
+            choice_text = re.sub(r'\s*ANSWER\s*:.*$', '', choice_text, flags=re.IGNORECASE).strip()
+            choices[mc.group(1)] = choice_text
         else:
             if line:
                 question_parts.append(line)
