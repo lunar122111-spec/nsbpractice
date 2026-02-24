@@ -607,7 +607,7 @@
       document.getElementById('qBadge').textContent  = 'TOSS-UP';
       document.getElementById('qSubject').textContent = q.subject;
       document.getElementById('qFormat').textContent  = q.type;
-      document.getElementById('qText').textContent    = q.question;
+      renderMath(document.getElementById('qText'), q.question);
       // Update source label
       if (current.meta) {
         document.getElementById('srcSet').textContent   = `Set ${current.meta.set}`;
@@ -617,7 +617,7 @@
     } else {
       document.getElementById('bonusSubject').textContent = q.subject;
       document.getElementById('bonusFormat').textContent  = q.type;
-      document.getElementById('bonusText').textContent    = q.question;
+      renderMath(document.getElementById('bonusText'), q.question);
     }
 
     if (q.type === 'Multiple Choice') {
